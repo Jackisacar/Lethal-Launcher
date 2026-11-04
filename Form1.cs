@@ -163,62 +163,91 @@ namespace LethalLauncher
         }
 
         private void LaunchVanilla()
+{
+    try
+    {
+        LogMessage("Purging BepInEx plugins for Vanilla run...");
+        string targetPlugins = Path.Combine(steamGameDir, "BepInEx", "plugins");
+        string targetConfig = Path.Combine(steamGameDir, "BepInEx", "config");
+
+        if (Directory.Exists(targetPlugins)) Directory.Delete(targetPlugins, true);
+        if (Directory.Exists(targetConfig)) Directory.Delete(targetConfig, true);
+
+        LogMessage("Initializing Steam protocol [Vanilla]...");
+        // Updated to the correct Lethal Company App ID (1966720)
+        Process.Start(new ProcessStartInfo("steam://rungameid/1966720") { UseShellExecute = true });
+        LogMessage("EXECUTION COMPLETE. Good luck out there, employee.");
+    }
+    catch (Exception ex)
+    {
+        LogMessage($"CRITICAL ERROR: {ex.Message}");
+    }
+}
+
+       private void LaunchSelectedProfile()
+{
+    if (cmbProfiles.SelectedItem == null)
+    {
+        MessageBox.Show("Please select a profile from the terminal dropdown first!", "Terminal Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        return;
+    }
+
+    string selectedProfile = cmbProfiles.SelectedItem.ToString()!;
+    try
+    {
+        LogMessage($"Target profile locked: [{selectedProfile}]");
+        
+        string targetGameDir = steamGameDir; // Your main Lethal Company folder
+        string targetBepInEx = Path.Combine(targetGameDir, "BepInEx");
+        
+        // 1. Clean out the game's current BepInEx folder to prevent leftover mod conflicts
+        LogMessage("Purging old mods from game directory...");
+        if (Directory.Exists(targetBepInEx))
         {
-            try
-            {
-                LogMessage("Purging BepInEx plugins for Vanilla run...");
-                string targetPlugins = Path.Combine(steamGameDir, "BepInEx", "plugins");
-                string targetConfig = Path.Combine(steamGameDir, "BepInEx", "config");
-
-                if (Directory.Exists(targetPlugins)) Directory.Delete(targetPlugins, true);
-                if (Directory.Exists(targetConfig)) Directory.Delete(targetConfig, true);
-
-                LogMessage("Initializing Steam protocol [Vanilla]...");
-                Process.Start(new ProcessStartInfo("steam://rungameid/1948280") { UseShellExecute = true });
-                LogMessage("EXECUTION COMPLETE. Good luck out there, employee.");
-            }
-            catch (Exception ex)
-            {
-                LogMessage($"CRITICAL ERROR: {ex.Message}");
-            }
+            Directory.Delete(targetBepInEx, true);
         }
 
-        private void LaunchSelectedProfile()
+        // 2. Locate the source BepInEx folder inside your profile directory
+        string sourceProfileDir = Path.Combine(profilesDir, selectedProfile);
+        string sourceBepInEx = Path.Combine(sourceProfileDir, "BepInEx");
+
+        if (Directory.Exists(sourceBepInEx))
         {
-            if (cmbProfiles.SelectedItem == null)
+            LogMessage("Injecting profile BepInEx contents...");
+            
+            // Recreate the base BepInEx folder in the game directory
+            Directory.CreateDirectory(targetBepInEx);
+
+            // Copy subfolders (plugins, config, etc.) individually
+            foreach (string dirPath in Directory.GetDirectories(sourceBepInEx, "*", SearchOption.AllDirectories))
             {
-                MessageBox.Show("Please select a profile from the terminal dropdown first!", "Terminal Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                string relativePath = dirPath.Substring(sourceBepInEx.Length + 1);
+                Directory.CreateDirectory(Path.Combine(targetBepInEx, relativePath));
             }
 
-            string selectedProfile = cmbProfiles.SelectedItem.ToString()!;
-            try
+            foreach (string filePath in Directory.GetFiles(sourceBepInEx, "*.*", SearchOption.AllDirectories))
             {
-                LogMessage($"Target profile locked: [{selectedProfile}]");
-                string targetPlugins = Path.Combine(steamGameDir, "BepInEx", "plugins");
-                string targetConfig = Path.Combine(steamGameDir, "BepInEx", "config");
-
-                LogMessage("Purging old mods from game directory...");
-                if (Directory.Exists(targetPlugins)) Directory.Delete(targetPlugins, true);
-                if (Directory.Exists(targetConfig)) Directory.Delete(targetConfig, true);
-
-                string sourcePlugins = Path.Combine(profilesDir, selectedProfile, "BepInEx", "plugins");
-                string sourceConfig = Path.Combine(profilesDir, selectedProfile, "BepInEx", "config");
-
-                LogMessage("Injecting mod files into BepInEx directory...");
-                if (Directory.Exists(sourcePlugins)) CopyDirectory(sourcePlugins, targetPlugins);
-                if (Directory.Exists(sourceConfig)) CopyDirectory(sourceConfig, targetConfig);
-
-                LogMessage("Launching Lethal Company via Steam protocol...");
-                Process.Start(new ProcessStartInfo("steam://rungameid/1948280") { UseShellExecute = true });
-                LogMessage("EXECUTION COMPLETE. Modpack active.");
+                string relativePath = filePath.Substring(sourceBepInEx.Length + 1);
+                File.Copy(filePath, Path.Combine(targetBepInEx, relativePath), true);
             }
-            catch (Exception ex)
-            {
-                LogMessage($"CRITICAL ERROR: {ex.Message}");
-                MessageBox.Show($"Launch failed: {ex.Message}", "Terminal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+            
+            LogMessage("Mod sync complete.");
         }
+        else
+        {
+            LogMessage($"WARNING: No 'BepInEx' folder found in profile {selectedProfile}!");
+        }
+
+        LogMessage("Launching Lethal Company via Steam protocol...");
+        Process.Start(new ProcessStartInfo("steam://rungameid/1966720") { UseShellExecute = true });
+        LogMessage("EXECUTION COMPLETE. Modpack active.");
+    }
+    catch (Exception ex)
+    {
+        LogMessage($"CRITICAL ERROR: {ex.Message}");
+        MessageBox.Show($"Launch failed: {ex.Message}", "Terminal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+    }
+}
 
         private static void CopyDirectory(string sourceDir, string destinationDir)
         {

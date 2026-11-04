@@ -7,6 +7,9 @@
     <UseWindowsForms>true</UseWindowsForms>
     <RootNamespace>LethalLauncher</RootNamespace>
     <AssemblyName>LethalLauncher</AssemblyName>
+
+    <!-- The new icon configuration -->
+    <ApplicationIcon>LethalIcon.ico</ApplicationIcon>
   </PropertyGroup>
 
 </Project>
