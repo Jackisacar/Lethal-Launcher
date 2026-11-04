@@ -1,153 +1,125 @@
 using System;
-using System.ComponentModel;
-using System.Diagnostics;
-using System.Drawing;
 using System.IO;
+using System.Drawing;
 using System.Windows.Forms;
+using System.Diagnostics;
 
 namespace LethalLauncher
 {
     public partial class Form1 : Form
     {
-        private readonly string steamGameDir = @"C:\Program Files (x86)\Steam\steamapps\common\Lethal Company";
-        private readonly string profilesDir = @"C:\LethalCompanyProfiles\Profiles";
+        private ComboBox cmbProfiles = null!;
+        private TextBox txtConsole = null!;
+        private Button btnLaunchModded = null!;
+        private Button btnLaunchVanilla = null!;
+        private Label lblHeader = null!;
 
-        // UI Controls (Terminal Aesthetic)
-        private readonly Label lblHeader = new Label();
-        private readonly Label lblSubHeader = new Label();
-        private readonly Label lblSelect = new Label();
-        private readonly ComboBox cmbProfiles = new ComboBox();
-        private readonly Button btnLaunchModded = new Button();
-        private readonly Button btnLaunchVanilla = new Button();
-        private readonly RichTextBox txtLog = new RichTextBox();
-        private readonly IContainer? components = null;
+        // Hardcoded or default paths based on your configuration
+        private string profilesDir = @"C:\LethalCompanyProfiles\Profiles";
+        private string steamGameDir = @"C:\Program Files (x86)\Steam\steamapps\common\Lethal Company";
 
         public Form1()
         {
-            SetupTerminalUI();
-            LoadAvailableProfiles();
+            InitializeTerminalLayout();
+            LoadProfiles();
         }
 
-        protected override void Dispose(bool disposing)
+        private void InitializeTerminalLayout()
         {
-            if (disposing && (components != null))
-            {
-                components.Dispose();
-            }
-            base.Dispose(disposing);
-        }
-
-        private void SetupTerminalUI()
-        {
-            // Form Window Configuration (Authentic Terminal Dark Theme)
-            this.Text = "LETHAL COMPANY // OS TERMINAL";
-            this.Size = new Size(540, 500);
-            this.BackColor = Color.FromArgb(8, 8, 10); // Deep CRT Black
-            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            // Window Configuration (CRT Terminal Aesthetic)
+            this.Text = "Lethal Company Terminal // OS-v8.0";
+            this.Size = new Size(650, 480);
+            this.BackColor = Color.Black;
+            this.ForeColor = Color.FromArgb(255, 140, 0); // Amber Phosphor Glow
+            this.FormBorderStyle = FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.StartPosition = FormStartPosition.CenterScreen;
 
-            // Header Title (Classic Amber CRT Glow)
-            lblHeader.Text = "> LETHAL COMPANY MODPACK MANAGER v1.0";
-            lblHeader.ForeColor = Color.FromArgb(255, 150, 0); // Iconic Amber
-            lblHeader.Font = new Font("Consolas", 11, FontStyle.Bold);
-            lblHeader.Location = new Point(20, 15);
-            lblHeader.AutoSize = true;
+            Font terminalFont = new Font("Consolas", 10F, FontStyle.Regular, GraphicsUnit.Point);
+
+            // Header Label
+            lblHeader = new Label();
+            lblHeader.Text = "COMPANY SYSTEM TERMINAL // PROFILE SELECTOR";
+            lblHeader.Font = new Font("Consolas", 11F, FontStyle.Bold, GraphicsUnit.Point);
+            lblHeader.ForeColor = Color.FromArgb(255, 140, 0);
+            lblHeader.Location = new Point(20, 20);
+            lblHeader.Size = new Size(590, 25);
             this.Controls.Add(lblHeader);
 
-            // Sub-divider line label
-            lblSubHeader.Text = "----------------------------------------------------";
-            lblSubHeader.ForeColor = Color.FromArgb(80, 50, 0);
-            lblSubHeader.Font = new Font("Consolas", 9, FontStyle.Regular);
-            lblSubHeader.Location = new Point(20, 32);
-            lblSubHeader.AutoSize = true;
-            this.Controls.Add(lblSubHeader);
-
-            // Profile Selection Label
-            lblSelect.Text = "SELECT TARGET PROFILE:";
-            lblSelect.ForeColor = Color.FromArgb(200, 150, 80);
-            lblSelect.Font = new Font("Consolas", 9, FontStyle.Bold);
-            lblSelect.Location = new Point(20, 55);
-            lblSelect.AutoSize = true;
-            this.Controls.Add(lblSelect);
-
-            // Profile Dropdown ComboBox (Terminal Styled)
-            cmbProfiles.Location = new Point(20, 80);
-            cmbProfiles.Size = new Size(480, 26);
-            cmbProfiles.Font = new Font("Consolas", 10, FontStyle.Regular);
-            cmbProfiles.BackColor = Color.FromArgb(15, 15, 18);
-            cmbProfiles.ForeColor = Color.FromArgb(255, 170, 50);
+            // Profile Dropdown
+            cmbProfiles = new ComboBox();
+            cmbProfiles.Location = new Point(20, 60);
+            cmbProfiles.Size = new Size(400, 25);
+            cmbProfiles.Font = terminalFont;
+            cmbProfiles.BackColor = Color.FromArgb(20, 10, 0);
+            cmbProfiles.ForeColor = Color.FromArgb(255, 140, 0);
             cmbProfiles.DropDownStyle = ComboBoxStyle.DropDownList;
             this.Controls.Add(cmbProfiles);
 
-            // Launch Modded Button (Amber Industrial Accent)
+            // Launch Modded Button
+            btnLaunchModded = new Button();
             btnLaunchModded.Text = "[ EXECUTE MODDED ]";
-            btnLaunchModded.Location = new Point(20, 122);
-            btnLaunchModded.Size = new Size(235, 45);
-            btnLaunchModded.BackColor = Color.FromArgb(220, 110, 0);
-            btnLaunchModded.ForeColor = Color.Black;
+            btnLaunchModded.Location = new Point(435, 58);
+            btnLaunchModded.Size = new Size(175, 30);
+            btnLaunchModded.Font = terminalFont;
+            btnLaunchModded.BackColor = Color.FromArgb(40, 20, 0);
+            btnLaunchModded.ForeColor = Color.FromArgb(255, 140, 0);
             btnLaunchModded.FlatStyle = FlatStyle.Flat;
-            btnLaunchModded.Font = new Font("Consolas", 10, FontStyle.Bold);
-            btnLaunchModded.Cursor = Cursors.Hand;
-            btnLaunchModded.FlatAppearance.BorderColor = Color.FromArgb(255, 140, 0);
-            btnLaunchModded.Click += (s, e) => LaunchSelectedProfile();
+            btnLaunchModded.Click += BtnLaunchModded_Click;
             this.Controls.Add(btnLaunchModded);
 
-            // Launch Vanilla Button (Dark Steel Terminal Style)
+            // Launch Vanilla Button
+            btnLaunchVanilla = new Button();
             btnLaunchVanilla.Text = "[ LAUNCH VANILLA ]";
-            btnLaunchVanilla.Location = new Point(265, 122);
-            btnLaunchVanilla.Size = new Size(235, 45);
-            btnLaunchVanilla.BackColor = Color.FromArgb(25, 25, 30);
-            btnLaunchVanilla.ForeColor = Color.FromArgb(180, 180, 180);
+            btnLaunchVanilla.Location = new Point(435, 100);
+            btnLaunchVanilla.Size = new Size(175, 30);
+            btnLaunchVanilla.Font = terminalFont;
+            btnLaunchVanilla.BackColor = Color.FromArgb(40, 20, 0);
+            btnLaunchVanilla.ForeColor = Color.FromArgb(255, 140, 0);
             btnLaunchVanilla.FlatStyle = FlatStyle.Flat;
-            btnLaunchVanilla.Font = new Font("Consolas", 10, FontStyle.Bold);
-            btnLaunchVanilla.Cursor = Cursors.Hand;
-            btnLaunchVanilla.FlatAppearance.BorderColor = Color.FromArgb(60, 60, 70);
-            btnLaunchVanilla.Click += (s, e) => LaunchVanilla();
+            btnLaunchVanilla.Click += BtnLaunchVanilla_Click;
             this.Controls.Add(btnLaunchVanilla);
 
-            // Terminal Log Box (Pitch Black with Amber Phosphor Text)
-            txtLog.Location = new Point(20, 185);
-            txtLog.Size = new Size(480, 250);
-            txtLog.BackColor = Color.FromArgb(5, 5, 7);
-            txtLog.ForeColor = Color.FromArgb(255, 145, 0); // Amber terminal stream
-            txtLog.Font = new Font("Consolas", 9, FontStyle.Regular);
-            txtLog.ReadOnly = true;
-            txtLog.BorderStyle = BorderStyle.FixedSingle;
-            this.Controls.Add(txtLog);
-
-            LogMessage("SYSTEM BOOT SUCCESSFUL.");
-            LogMessage("Connected to local profile directory.");
+            // Real-Time Console Log Box
+            txtConsole = new TextBox();
+            txtConsole.Location = new Point(20, 145);
+            txtConsole.Size = new Size(590, 275);
+            txtConsole.Multiline = true;
+            txtConsole.ReadOnly = true;
+            txtConsole.ScrollBars = ScrollBars.Vertical;
+            txtConsole.BackColor = Color.FromArgb(5, 2, 0);
+            txtConsole.ForeColor = Color.FromArgb(255, 140, 0);
+            txtConsole.Font = terminalFont;
+            this.Controls.Add(txtConsole);
         }
 
-        private void LoadAvailableProfiles()
+        private void LoadProfiles()
         {
-            cmbProfiles.Items.Clear();
             try
             {
-                if (Directory.Exists(profilesDir))
+                if (!Directory.Exists(profilesDir))
                 {
-                    string[] profileFolders = Directory.GetDirectories(profilesDir);
-                    foreach (string folder in profileFolders)
-                    {
-                        string folderName = Path.GetFileName(folder);
-                        cmbProfiles.Items.Add(folderName);
-                    }
+                    Directory.CreateDirectory(profilesDir);
+                    LogMessage($"Created missing profiles directory at: {profilesDir}");
+                }
 
-                    if (cmbProfiles.Items.Count > 0)
-                    {
-                        cmbProfiles.SelectedIndex = 0;
-                        LogMessage($"Loaded {cmbProfiles.Items.Count} profile(s) successfully.");
-                    }
-                    else
-                    {
-                        LogMessage("WARNING: No modpack profiles detected in C:\\LethalCompanyProfiles\\Profiles");
-                    }
+                cmbProfiles.Items.Clear();
+                string[] profileDirs = Directory.GetDirectories(profilesDir);
+
+                foreach (string dir in profileDirs)
+                {
+                    string profileName = Path.GetFileName(dir);
+                    cmbProfiles.Items.Add(profileName);
+                }
+
+                if (cmbProfiles.Items.Count > 0)
+                {
+                    cmbProfiles.SelectedIndex = 0;
+                    LogMessage($"Loaded {cmbProfiles.Items.Count} modpack profile(s) successfully.");
                 }
                 else
                 {
-                    Directory.CreateDirectory(profilesDir);
-                    LogMessage("Initialized missing Profiles directory.");
+                    LogMessage("WARNING: No modpack profiles found in directory.");
                 }
             }
             catch (Exception ex)
@@ -158,108 +130,83 @@ namespace LethalLauncher
 
         private void LogMessage(string message)
         {
-            txtLog.AppendText($"> [{DateTime.Now:HH:mm:ss}] {message}\n");
-            txtLog.ScrollToCaret();
-        }
-
-        private void LaunchVanilla()
-{
-    try
-    {
-        LogMessage("Purging BepInEx plugins for Vanilla run...");
-        string targetPlugins = Path.Combine(steamGameDir, "BepInEx", "plugins");
-        string targetConfig = Path.Combine(steamGameDir, "BepInEx", "config");
-
-        if (Directory.Exists(targetPlugins)) Directory.Delete(targetPlugins, true);
-        if (Directory.Exists(targetConfig)) Directory.Delete(targetConfig, true);
-
-        LogMessage("Initializing Steam protocol [Vanilla]...");
-        // Updated to the correct Lethal Company App ID (1966720)
-        Process.Start(new ProcessStartInfo("steam://rungameid/1966720") { UseShellExecute = true });
-        LogMessage("EXECUTION COMPLETE. Good luck out there, employee.");
-    }
-    catch (Exception ex)
-    {
-        LogMessage($"CRITICAL ERROR: {ex.Message}");
-    }
-}
-
-       private void LaunchSelectedProfile()
-{
-    if (cmbProfiles.SelectedItem == null)
-    {
-        MessageBox.Show("Please select a profile from the terminal dropdown first!", "Terminal Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-        return;
-    }
-
-    string selectedProfile = cmbProfiles.SelectedItem.ToString()!;
-    try
-    {
-        LogMessage($"Target profile locked: [{selectedProfile}]");
-        
-        string targetGameDir = steamGameDir; // Your main Lethal Company folder
-        string targetBepInEx = Path.Combine(targetGameDir, "BepInEx");
-        
-        // 1. Clean out the game's current BepInEx folder to prevent leftover mod conflicts
-        LogMessage("Purging old mods from game directory...");
-        if (Directory.Exists(targetBepInEx))
-        {
-            Directory.Delete(targetBepInEx, true);
-        }
-
-        // 2. Locate the source BepInEx folder inside your profile directory
-        string sourceProfileDir = Path.Combine(profilesDir, selectedProfile);
-        string sourceBepInEx = Path.Combine(sourceProfileDir, "BepInEx");
-
-        if (Directory.Exists(sourceBepInEx))
-        {
-            LogMessage("Injecting profile BepInEx contents...");
-            
-            // Recreate the base BepInEx folder in the game directory
-            Directory.CreateDirectory(targetBepInEx);
-
-            // Copy subfolders (plugins, config, etc.) individually
-            foreach (string dirPath in Directory.GetDirectories(sourceBepInEx, "*", SearchOption.AllDirectories))
+            if (txtConsole.InvokeRequired)
             {
-                string relativePath = dirPath.Substring(sourceBepInEx.Length + 1);
-                Directory.CreateDirectory(Path.Combine(targetBepInEx, relativePath));
+                txtConsole.Invoke(new Action<string>(LogMessage), message);
             }
-
-            foreach (string filePath in Directory.GetFiles(sourceBepInEx, "*.*", SearchOption.AllDirectories))
+            else
             {
-                string relativePath = filePath.Substring(sourceBepInEx.Length + 1);
-                File.Copy(filePath, Path.Combine(targetBepInEx, relativePath), true);
-            }
-            
-            LogMessage("Mod sync complete.");
-        }
-        else
-        {
-            LogMessage($"WARNING: No 'BepInEx' folder found in profile {selectedProfile}!");
-        }
-
-        LogMessage("Launching Lethal Company via Steam protocol...");
-        Process.Start(new ProcessStartInfo("steam://rungameid/1966720") { UseShellExecute = true });
-        LogMessage("EXECUTION COMPLETE. Modpack active.");
-    }
-    catch (Exception ex)
-    {
-        LogMessage($"CRITICAL ERROR: {ex.Message}");
-        MessageBox.Show($"Launch failed: {ex.Message}", "Terminal Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-    }
-}
-
-        private static void CopyDirectory(string sourceDir, string destinationDir)
-        {
-            Directory.CreateDirectory(destinationDir);
-            foreach (string file in Directory.GetFiles(sourceDir))
-            {
-                File.Copy(file, Path.Combine(destinationDir, Path.GetFileName(file)), true);
-            }
-            foreach (string subDir in Directory.GetDirectories(sourceDir))
-            {
-                CopyDirectory(subDir, Path.Combine(destinationDir, Path.GetFileName(subDir)));
+                txtConsole.AppendText($"[{DateTime.Now:HH:mm:ss}] {message}{Environment.NewLine}");
             }
         }
-    }
-}
+
+        private void BtnLaunchVanilla_Click(object? sender, EventArgs e)
+        {
+            try
+            {
+                LogMessage("Initiating protocol: VANILLA RUN");
+                LogMessage($"Target Game Directory: {steamGameDir}");
+
+                string targetBepInEx = Path.Combine(steamGameDir, "BepInEx");
+                string targetWinHttp = Path.Combine(steamGameDir, "winhttp.dll");
+                string targetDoorstop = Path.Combine(steamGameDir, "doorstop_config.ini");
+
+                // Purge BepInEx and loaders for clean vanilla state
+                if (Directory.Exists(targetBepInEx)) Directory.Delete(targetBepInEx, true);
+                if (File.Exists(targetWinHttp)) File.Delete(targetWinHttp);
+                if (File.Exists(targetDoorstop)) File.Delete(targetDoorstop);
+
+                LogMessage("Purged active mod files. Launching vanilla via Steam App ID 1966720...");
+                Process.Start(new ProcessStartInfo("steam://rungameid/1966720") { UseShellExecute = true });
+                LogMessage("EXECUTION COMPLETE. Good luck out there, employee.");
+            }
+            catch (Exception ex)
+            {
+                LogMessage($"CRITICAL ERROR: {ex.Message}");
+            }
+        }
+
+        private void BtnLaunchModded_Click(object? sender, EventArgs e)
+        {
+            if (cmbProfiles.SelectedItem == null)
+            {
+                MessageBox.Show("Please select a profile from the terminal dropdown first!", "Terminal Warning", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            string selectedProfile = cmbProfiles.SelectedItem.ToString()!;
+            try
+            {
+                LogMessage($"Target profile locked: [{selectedProfile}]");
+                LogMessage($"Target Game Directory: {steamGameDir}");
+
+                string targetBepInEx = Path.Combine(steamGameDir, "BepInEx");
+                string targetWinHttp = Path.Combine(steamGameDir, "winhttp.dll");
+                string targetDoorstop = Path.Combine(steamGameDir, "doorstop_config.ini");
+
+                // 1. Purge old game mods and loaders
+                LogMessage("Purging old mods from game directory...");
+                if (Directory.Exists(targetBepInEx)) Directory.Delete(targetBepInEx, true);
+                if (File.Exists(targetWinHttp)) File.Delete(targetWinHttp);
+                if (File.Exists(targetDoorstop)) File.Delete(targetDoorstop);
+
+                // 2. Locate source profile directory
+                string sourceProfileDir = Path.Combine(profilesDir, selectedProfile);
+                string sourceBepInEx = Path.Combine(sourceProfileDir, "BepInEx");
+
+                if (Directory.Exists(sourceBepInEx))
+                {
+                    LogMessage("Injecting profile BepInEx contents and core loaders...");
+
+                    // Recreate BepInEx folder structure
+                    Directory.CreateDirectory(targetBepInEx);
+
+                    foreach (string dirPath in Directory.GetDirectories(sourceBepInEx, "*", SearchOption.AllDirectories))
+                    {
+                        string relativePath = dirPath.Substring(sourceBepInEx.Length + 1);
+                        Directory.CreateDirectory(Path.Combine(targetBepInEx, relativePath));
+                    }
+
+                    foreach (string filePath in Directory.GetFiles(sourceBepInEx, "*.*", SearchOption.AllDirectories))
+                    {
+                        string relativePath = filePath.Substring
